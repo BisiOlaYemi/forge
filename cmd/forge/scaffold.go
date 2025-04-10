@@ -107,7 +107,7 @@ database:
 go 1.21
 
 require (
-	github.com/BisiOlaYemi/forge v0.1.0
+	github.com/BisiOlaYemi/forge v0.0.0-20250410105738-69dbba69f7f0
 )
 `
 
