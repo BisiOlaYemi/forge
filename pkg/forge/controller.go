@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// Controller is the base controller type that all controllers should embed
+// Controller is the base type for all controllers
 type Controller struct {
 	app *Application
 }
@@ -96,7 +96,12 @@ func splitCamelCase(s string) []string {
 	return parts
 }
 
-// SetApp sets the application instance for the controller
-func (c *Controller) SetApp(app *Application) {
+// SetApplication sets the application instance for the controller
+func (c *Controller) SetApplication(app *Application) {
 	c.app = app
+}
+
+// App returns the application instance
+func (c *Controller) App() *Application {
+	return c.app
 } 

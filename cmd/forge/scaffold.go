@@ -7,35 +7,35 @@ import (
 	"strings"
 )
 
-// ProjectTemplate represents a project template
+
 type ProjectTemplate struct {
 	Name        string
 	Description string
 	Files       map[string]string
 }
 
-// ControllerTemplate represents a controller template
+
 type ControllerTemplate struct {
 	Name        string
 	Description string
 	Methods     []string
 }
 
-// ModelTemplate represents a model template
+
 type ModelTemplate struct {
 	Name        string
 	Description string
 	Fields      []string
 }
 
-// createNewProject creates a new Forge project
+
 func createNewProject(name string) error {
-	// Create project directory
+	
 	if err := os.MkdirAll(name, 0755); err != nil {
 		return fmt.Errorf("failed to create project directory: %w", err)
 	}
 
-	// Create project structure
+	
 	dirs := []string{
 		filepath.Join(name, "app", "controllers"),
 		filepath.Join(name, "app", "models"),
@@ -57,7 +57,7 @@ func createNewProject(name string) error {
 	mainContent := `package main
 
 import (
-	"github.com/forge/framework/pkg/forge"
+	"github.com/BisiOlaYemi/forge/framework/pkg/forge"
 )
 
 func main() {
@@ -101,13 +101,13 @@ database:
 		return fmt.Errorf("failed to create forge.yaml: %w", err)
 	}
 
-	// Create go.mod
+	
 	modContent := `module ` + name + `
 
 go 1.21
 
 require (
-	github.com/forge/framework v0.1.0
+	github.com/BisiOlaYemi/forge/framework v0.1.0
 )
 `
 
