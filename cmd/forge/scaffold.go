@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/BisiOlaYemi/forge/pkg/forge"
 )
 
 
@@ -57,22 +60,35 @@ func createNewProject(name string) error {
 	mainContent := `package main
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/BisiOlaYemi/forge/pkg/forge"
 )
 
 func main() {
-	app := forge.New(&forge.Config{
-		Port:     "3000",
-		Host:     "localhost",
-		BasePath: "/",
+	// Create a new Forge application
+	app, err := forge.New(&forge.Config{
+		Name:        "` + name + `",
+		Version:     "1.0.0",
+		Description: "A Forge application",
+		Server: forge.ServerConfig{
+			Host:     "localhost",
+			Port:     3000,
+			BasePath: "/",
+		},
 	})
+	if err != nil {
+		log.Fatalf("Failed to create application: %v", err)
+	}
 
 	// Register controllers
 	// app.RegisterController(&UserController{})
 
 	// Start the server
+	fmt.Printf("Server starting on http://localhost:3000\n")
 	if err := app.Start(); err != nil {
-		panic(err)
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 `
