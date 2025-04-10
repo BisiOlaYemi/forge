@@ -1,0 +1,174 @@
+package plugin
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"plugin"
+	"sync"
+)
+
+// AppInterface defines the interface that plugins can use to interact with the application
+type AppInterface interface {
+	GetConfig() interface{}
+	GetDB() interface{}
+	GetAuth() interface{}
+	GetQueue() interface{}
+	GetMailer() interface{}
+	RegisterController(controller interface{})
+}
+
+// Plugin represents a Forge plugin
+type Plugin interface {
+	Name() string
+	Description() string
+	Version() string
+	Init(app AppInterface) error
+	Shutdown() error
+}
+
+// Manager handles plugin loading and management
+type Manager struct {
+	plugins     map[string]Plugin
+	app         AppInterface
+	mu          sync.RWMutex
+	pluginDir   string
+	configPath  string
+}
+
+// Config represents the plugin configuration
+type Config struct {
+	Enabled  bool                   `json:"enabled"`
+	Settings map[string]interface{} `json:"settings"`
+}
+
+// NewManager creates a new plugin manager
+func NewManager(app AppInterface, pluginDir string) *Manager {
+	return &Manager{
+		plugins:   make(map[string]Plugin),
+		app:       app,
+		pluginDir: pluginDir,
+	}
+}
+
+// LoadPlugins loads all plugins from the plugin directory
+func (m *Manager) LoadPlugins() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Create plugin directory if it doesn't exist
+	if err := os.MkdirAll(m.pluginDir, 0755); err != nil {
+		return fmt.Errorf("failed to create plugin directory: %w", err)
+	}
+
+	// Load plugin configuration
+	config, err := m.loadConfig()
+	if err != nil {
+		return err
+	}
+
+	// Walk through plugin directory
+	return filepath.Walk(m.pluginDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories and non-plugin files
+		if info.IsDir() || filepath.Ext(path) != ".so" {
+			return nil
+		}
+
+		// Load plugin
+		p, err := plugin.Open(path)
+		if err != nil {
+			return fmt.Errorf("failed to load plugin %s: %w", path, err)
+		}
+
+		// Look up New function
+		newFunc, err := p.Lookup("New")
+		if err != nil {
+			return fmt.Errorf("plugin %s does not export New function: %w", path, err)
+		}
+
+		// Create plugin instance
+		pluginFunc, ok := newFunc.(func() (Plugin, error))
+		if !ok {
+			return fmt.Errorf("plugin %s New function has invalid signature", path)
+		}
+
+		plugin, err := pluginFunc()
+		if err != nil {
+			return fmt.Errorf("failed to create plugin instance %s: %w", path, err)
+		}
+
+		// Check if plugin is enabled
+		if !config[plugin.Name()].Enabled {
+			return nil
+		}
+
+		// Initialize plugin
+		if err := plugin.Init(m.app); err != nil {
+			return fmt.Errorf("failed to initialize plugin %s: %w", path, err)
+		}
+
+		// Store plugin
+		m.plugins[plugin.Name()] = plugin
+
+		return nil
+	})
+}
+
+// UnloadPlugins unloads all plugins
+func (m *Manager) UnloadPlugins() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for name, plugin := range m.plugins {
+		if err := plugin.Shutdown(); err != nil {
+			return fmt.Errorf("failed to shutdown plugin %s: %w", name, err)
+		}
+		delete(m.plugins, name)
+	}
+
+	return nil
+}
+
+// GetPlugin returns a plugin by name
+func (m *Manager) GetPlugin(name string) (Plugin, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	plugin, ok := m.plugins[name]
+	return plugin, ok
+}
+
+// loadConfig loads the plugin configuration
+func (m *Manager) loadConfig() (map[string]Config, error) {
+	configPath := filepath.Join(m.pluginDir, "config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return make(map[string]Config), nil
+		}
+		return nil, err
+	}
+
+	var config map[string]Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+// saveConfig saves the plugin configuration
+func (m *Manager) saveConfig(config map[string]Config) error {
+	configPath := filepath.Join(m.pluginDir, "config.json")
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(configPath, data, 0644)
+} 
