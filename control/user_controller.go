@@ -1,7 +1,7 @@
-package main
+package control
 
 import (
-	"github.com/forge/framework/pkg/forge"
+	"github.com/BisiOlaYemi/forge/pkg/forge"
 )
 
 // UserController handles user-related requests
@@ -41,13 +41,13 @@ func (c *UserController) HandlePostLogin(ctx *forge.Context) error {
 		})
 	}
 
-	// TODO: Implement actual login logic
+	// login logic
 	response := LoginResponse{
 		Token: "dummy-token",
 		User: User{
 			ID:    1,
 			Email: req.Email,
-			Name:  "John Doe",
+			Name:  "Go Forge",
 		},
 	}
 
@@ -60,13 +60,11 @@ func (c *UserController) HandlePostLogin(ctx *forge.Context) error {
 // @param id path int true "User ID"
 // @response 200 User
 func (c *UserController) HandleGetUser(ctx *forge.Context) error {
-	id := ctx.Param("id")
 	
-	// TODO: Implement actual user fetching logic
 	user := User{
 		ID:    1,
-		Email: "john@example.com",
-		Name:  "John Doe",
+		Email: "fgo@example.com",
+		Name:  "Go Forge",
 	}
 
 	return ctx.JSON(user)

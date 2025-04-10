@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -17,9 +18,17 @@ type Database struct {
 }
 
 // NewDatabase creates a new database connection
-func NewDatabase(config *Config) (*Database, error) {
+func NewDatabase(config *DatabaseConfig) (*Database, error) {
+	if config == nil {
+		config = &DatabaseConfig{
+			Driver:        "sqlite",
+			Name:          "forge.db",
+			SlowThreshold: 200 * time.Millisecond,
+		}
+	}
+
 	// Create database directory if it doesn't exist
-	dbDir := filepath.Dir(config.Database.Name)
+	dbDir := filepath.Dir(config.Name)
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
@@ -28,15 +37,24 @@ func NewDatabase(config *Config) (*Database, error) {
 	gormLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
-			SlowThreshold:             config.Database.SlowThreshold,
+			SlowThreshold:             config.SlowThreshold,
 			LogLevel:                  logger.Info,
 			IgnoreRecordNotFoundError: true,
 			Colorful:                  true,
 		},
 	)
 
+	// Create database connection
+	var dialector gorm.Dialector
+	switch config.Driver {
+	case "sqlite":
+		dialector = sqlite.Open(config.Name)
+	default:
+		return nil, fmt.Errorf("unsupported database driver: %s", config.Driver)
+	}
+
 	// Connect to database
-	db, err := gorm.Open(sqlite.Open(config.Database.Name), &gorm.Config{
+	db, err := gorm.Open(dialector, &gorm.Config{
 		Logger: gormLogger,
 	})
 	if err != nil {

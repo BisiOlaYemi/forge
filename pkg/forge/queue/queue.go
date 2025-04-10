@@ -9,54 +9,54 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Job represents a queued job
-type Job struct {
-	ID        string                 `json:"id"`
-	Type      string                 `json:"type"`
-	Data      map[string]interface{} `json:"data"`
-	CreatedAt time.Time             `json:"created_at"`
-	Attempts  int                   `json:"attempts"`
-	MaxRetries int                  `json:"max_retries"`
+// Queue represents a Redis-based queue
+type Queue struct {
+	client   *redis.Client
+	handlers map[string]Handler
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
-// Handler processes a job
+// Config represents the queue configuration
+type Config struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
+}
+
+// Handler represents a job handler function
 type Handler func(job *Job) error
 
-// Queue manages job processing
-type Queue struct {
-	client  *redis.Client
-	handlers map[string]Handler
-	ctx     context.Context
-	cancel  context.CancelFunc
+// Job represents a job in the queue
+type Job struct {
+	ID         string                 `json:"id"`
+	Type       string                 `json:"type"`
+	Data       map[string]interface{} `json:"data"`
+	CreatedAt  time.Time             `json:"created_at"`
+	Attempts   int                    `json:"attempts"`
+	MaxRetries int                    `json:"max_retries"`
 }
 
-// New creates a new queue
-func New(addr, password string, db int) (*Queue, error) {
+// New creates a new queue instance
+func New(host string, password string, db int) (*Queue, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
+		Addr:     host,
 		Password: password,
 		DB:       db,
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	queue := &Queue{
+	return &Queue{
 		client:   client,
 		handlers: make(map[string]Handler),
 		ctx:      ctx,
 		cancel:   cancel,
-	}
-
-	// Test connection
-	if err := client.Ping(ctx).Err(); err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
-	}
-
-	return queue, nil
+	}, nil
 }
 
-// RegisterHandler registers a job handler
+// RegisterHandler registers a handler for a job type
 func (q *Queue) RegisterHandler(jobType string, handler Handler) {
 	q.handlers[jobType] = handler
 }
@@ -72,24 +72,26 @@ func (q *Queue) Enqueue(jobType string, data map[string]interface{}, maxRetries 
 		MaxRetries: maxRetries,
 	}
 
-	data, err := json.Marshal(job)
+	// Serialize job data
+	jobData, err := json.Marshal(job)
 	if err != nil {
 		return nil, err
 	}
 
 	key := fmt.Sprintf("job:%s", job.ID)
-	if err := q.client.Set(q.ctx, key, data, 24*time.Hour).Err(); err != nil {
+	if err := q.client.Set(q.ctx, key, jobData, 0).Err(); err != nil {
 		return nil, err
 	}
 
-	if err := q.client.LPush(q.ctx, fmt.Sprintf("queue:%s", jobType), job.ID).Err(); err != nil {
+	// Add to queue
+	if err := q.client.LPush(q.ctx, "queue", job.ID).Err(); err != nil {
 		return nil, err
 	}
 
 	return job, nil
 }
 
-// Start begins processing jobs
+// Start starts processing jobs
 func (q *Queue) Start() {
 	go q.processJobs()
 }
@@ -99,52 +101,54 @@ func (q *Queue) Stop() {
 	q.cancel()
 }
 
-// processJobs continuously processes jobs from the queue
+// processJobs processes jobs from the queue
 func (q *Queue) processJobs() {
 	for {
 		select {
 		case <-q.ctx.Done():
 			return
 		default:
-			for jobType, handler := range q.handlers {
-				jobID, err := q.client.RPop(q.ctx, fmt.Sprintf("queue:%s", jobType)).Result()
+			// Get next job from queue
+			jobID, err := q.client.RPop(q.ctx, "queue").Result()
+			if err != nil {
 				if err == redis.Nil {
+					time.Sleep(time.Second)
 					continue
 				}
-				if err != nil {
-					continue
-				}
+				continue
+			}
 
-				// Get job data
-				key := fmt.Sprintf("job:%s", jobID)
-				data, err := q.client.Get(q.ctx, key).Result()
-				if err != nil {
-					continue
-				}
+			// Get job data
+			key := fmt.Sprintf("job:%s", jobID)
+			jobData, err := q.client.Get(q.ctx, key).Bytes()
+			if err != nil {
+				continue
+			}
 
-				var job Job
-				if err := json.Unmarshal([]byte(data), &job); err != nil {
-					continue
-				}
+			// Unmarshal job
+			var job Job
+			if err := json.Unmarshal(jobData, &job); err != nil {
+				continue
+			}
 
-				// Process job
+			// Process job
+			if handler, ok := q.handlers[job.Type]; ok {
 				if err := handler(&job); err != nil {
 					job.Attempts++
 					if job.Attempts < job.MaxRetries {
 						// Requeue job
-						data, _ := json.Marshal(job)
-						q.client.Set(q.ctx, key, data, 24*time.Hour)
-						q.client.LPush(q.ctx, fmt.Sprintf("queue:%s", jobType), job.ID)
+						q.client.LPush(q.ctx, "queue", job.ID)
 					}
-				} else {
-					// Delete job on success
-					q.client.Del(q.ctx, key)
 				}
 			}
+
+			// Delete job data
+			q.client.Del(q.ctx, key)
 		}
 	}
 }
 
+// generateID generates a unique job ID
 func generateID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 } 

@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -9,70 +9,79 @@ import (
 )
 
 var (
-	ErrInvalidToken = errors.New("invalid token")
-	ErrExpiredToken = errors.New("token has expired")
+	ErrInvalidToken = fmt.Errorf("invalid token")
+	ErrExpiredToken = fmt.Errorf("token has expired")
 )
 
+// JWTManager handles JWT token operations
 type JWTManager struct {
-	secretKey     []byte
+	secretKey     string
 	tokenDuration time.Duration
 }
 
-type Claims struct {
-	UserID uint   `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
-	jwt.RegisteredClaims
+// Auth represents the authentication manager
+type Auth struct {
+	*JWTManager
 }
 
-func NewJWTManager(secretKey string, tokenDuration time.Duration) *JWTManager {
-	return &JWTManager{
-		secretKey:     []byte(secretKey),
-		tokenDuration: tokenDuration,
-	}
+// Config represents the authentication configuration
+type Config struct {
+	SecretKey     string        `yaml:"secret_key"`
+	TokenDuration time.Duration `yaml:"token_duration"`
 }
 
-func (m *JWTManager) GenerateToken(userID uint, email, role string) (string, error) {
-	claims := Claims{
-		UserID: userID,
-		Email:  email,
-		Role:   role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.tokenDuration)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
+// New creates a new authentication manager
+func New(config Config) (*Auth, error) {
+	if config.SecretKey == "" {
+		return nil, fmt.Errorf("secret key is required")
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(m.secretKey)
+	if config.TokenDuration == 0 {
+		config.TokenDuration = 24 * time.Hour
+	}
+
+	jwtManager := &JWTManager{
+		secretKey:     config.SecretKey,
+		tokenDuration: config.TokenDuration,
+	}
+
+	return &Auth{
+		JWTManager: jwtManager,
+	}, nil
 }
 
-func (m *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(
-		tokenString,
-		&Claims{},
-		func(token *jwt.Token) (interface{}, error) {
-			_, ok := token.Method.(*jwt.SigningMethodHMAC)
-			if !ok {
-				return nil, ErrInvalidToken
-			}
-			return m.secretKey, nil
-		},
-	)
+// GenerateToken generates a new JWT token
+func (m *JWTManager) GenerateToken(userID string, claims map[string]interface{}) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": userID,
+		"exp":     time.Now().Add(m.tokenDuration).Unix(),
+	})
+
+	for key, value := range claims {
+		token.Claims.(jwt.MapClaims)[key] = value
+	}
+
+	return token.SignedString([]byte(m.secretKey))
+}
+
+// ValidateToken validates a JWT token
+func (m *JWTManager) ValidateToken(tokenString string) (map[string]interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(m.secretKey), nil
+	})
 
 	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, ErrExpiredToken
-		}
-		return nil, ErrInvalidToken
+		return nil, err
 	}
 
-	claims, ok := token.Claims.(*Claims)
-	if !ok {
-		return nil, ErrInvalidToken
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
 	}
 
-	return claims, nil
+	return nil, fmt.Errorf("invalid token")
 }
 
 func HashPassword(password string) (string, error) {

@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/forge/framework/pkg/forge/auth"
-	"github.com/forge/framework/pkg/forge/mailer"
-	"github.com/forge/framework/pkg/forge/plugin"
-	"github.com/forge/framework/pkg/forge/queue"
+	"github.com/BisiOlaYemi/forge/pkg/forge/auth"
+	"github.com/BisiOlaYemi/forge/pkg/forge/mailer"
+	"github.com/BisiOlaYemi/forge/pkg/forge/plugin"
+	"github.com/BisiOlaYemi/forge/pkg/forge/queue"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -16,145 +16,123 @@ import (
 
 var validate = validator.New()
 
-// Application represents a Forge application
+// Application represents the Forge application
 type Application struct {
 	config     *Config
-	app        *fiber.App
-	controllers []Controller
+	server     *fiber.App
+	validator  *validator.Validate
 	database   *Database
-	auth       *auth.JWTManager
-	queue      *queue.Queue
+	auth       *auth.Auth
 	mailer     *mailer.Mailer
+	queue      *queue.Queue
 	plugins    *plugin.Manager
 	mu         sync.RWMutex
+	controllers []interface{}
 }
 
-// Config represents application configuration
+// Config represents the application configuration
 type Config struct {
-	Name     string         `mapstructure:"name"`
-	Port     int            `mapstructure:"port"`
-	Root     string         `mapstructure:"root"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Auth     AuthConfig     `mapstructure:"auth"`
-	Queue    QueueConfig    `mapstructure:"queue"`
-	Mailer   MailerConfig   `mapstructure:"mailer"`
-	Plugins  PluginsConfig  `mapstructure:"plugins"`
+	Name        string
+	Version     string
+	Description string
+	Server      ServerConfig
+	Database    DatabaseConfig
+	Auth        auth.Config
+	Mailer      mailer.Config
+	Queue       queue.Config
 }
 
+// ServerConfig represents the server configuration
+type ServerConfig struct {
+	Host     string
+	Port     int
+	BasePath string
+}
+
+// DatabaseConfig represents the database configuration
 type DatabaseConfig struct {
-	Driver        string `mapstructure:"driver"`
-	Name          string `mapstructure:"name"`
-	SlowThreshold int    `mapstructure:"slow_threshold"`
-}
-
-type AuthConfig struct {
-	SecretKey     string        `mapstructure:"secret_key"`
-	TokenDuration time.Duration `mapstructure:"token_duration"`
-}
-
-type QueueConfig struct {
-	Host     string `mapstructure:"host"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
-}
-
-type MailerConfig struct {
-	Host        string `mapstructure:"host"`
-	Port        int    `mapstructure:"port"`
-	Username    string `mapstructure:"username"`
-	Password    string `mapstructure:"password"`
-	From        string `mapstructure:"from"`
-	TemplateDir string `mapstructure:"template_dir"`
-}
-
-type PluginsConfig struct {
-	Enabled    bool   `mapstructure:"enabled"`
-	PluginDir  string `mapstructure:"plugin_dir"`
+	Driver        string
+	Name          string
+	Host          string
+	Port          int
+	Username      string
+	Password      string
+	SlowThreshold time.Duration
 }
 
 // New creates a new Forge application
 func New(config *Config) (*Application, error) {
-	if config == nil {
-		config = &Config{
-			Name: "forge-app",
-			Port: 3000,
-			Root: ".",
-			Database: DatabaseConfig{
-				Driver:        "sqlite",
-				Name:          "forge.db",
-				SlowThreshold: 200,
-			},
-			Auth: AuthConfig{
-				SecretKey:     "your-secret-key",
-				TokenDuration: 24 * time.Hour,
-			},
-			Queue: QueueConfig{
-				Host:     "localhost:6379",
-				Password: "",
-				DB:       0,
-			},
-			Mailer: MailerConfig{
-				Host:        "smtp.gmail.com",
-				Port:        587,
-				TemplateDir: "templates/email",
-			},
-			Plugins: PluginsConfig{
-				Enabled:   true,
-				PluginDir: "plugins",
-			},
-		}
-	}
-
 	app := &Application{
-		config:     config,
-		app:        fiber.New(),
-		controllers: make([]Controller, 0),
+		config:    config,
+		server:    fiber.New(),
+		validator: validator.New(),
 	}
 
 	// Initialize database
-	db, err := NewDatabase(config.Database)
+	db, err := NewDatabase(&config.Database)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 	app.database = db
 
 	// Initialize auth
-	app.auth = auth.NewJWTManager(config.Auth.SecretKey, config.Auth.TokenDuration)
-
-	// Initialize queue
-	q, err := queue.New(config.Queue.Host, config.Queue.Password, config.Queue.DB)
+	auth, err := auth.New(config.Auth)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize queue: %w", err)
+		return nil, fmt.Errorf("failed to initialize auth: %w", err)
 	}
-	app.queue = q
+	app.auth = auth
 
 	// Initialize mailer
-	m, err := mailer.New(mailer.Config{
-		Host:        config.Mailer.Host,
-		Port:        config.Mailer.Port,
-		Username:    config.Mailer.Username,
-		Password:    config.Mailer.Password,
-		From:        config.Mailer.From,
-		TemplateDir: config.Mailer.TemplateDir,
-	})
+	mailer, err := mailer.New(config.Mailer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize mailer: %w", err)
 	}
-	app.mailer = m
+	app.mailer = mailer
 
-	// Initialize plugins
-	if config.Plugins.Enabled {
-		app.plugins = plugin.NewManager(app, config.Plugins.PluginDir)
-		if err := app.plugins.LoadPlugins(); err != nil {
-			return nil, fmt.Errorf("failed to load plugins: %w", err)
-		}
+	// Initialize queue
+	queue, err := queue.New(config.Queue.Host, config.Queue.Password, config.Queue.DB)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize queue: %w", err)
 	}
+	app.queue = queue
+
+	// Initialize plugin manager
+	plugins := plugin.NewManager(app, "plugins")
+	if err := plugins.LoadPlugins(); err != nil {
+		return nil, fmt.Errorf("failed to load plugins: %w", err)
+	}
+	app.plugins = plugins
 
 	return app, nil
 }
 
-// RegisterController registers a controller
-func (app *Application) RegisterController(controller Controller) {
+// GetConfig returns the application configuration
+func (app *Application) GetConfig() interface{} {
+	return app.config
+}
+
+// GetDB returns the database instance
+func (app *Application) GetDB() interface{} {
+	return app.database.DB
+}
+
+// GetAuth returns the auth instance
+func (app *Application) GetAuth() interface{} {
+	return app.auth
+}
+
+// GetQueue returns the queue instance
+func (app *Application) GetQueue() interface{} {
+	return app.queue
+}
+
+// GetMailer returns the mailer instance
+func (app *Application) GetMailer() interface{} {
+	return app.mailer
+}
+
+// RegisterController registers a controller with the application
+func (app *Application) RegisterController(controller interface{}) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	app.controllers = append(app.controllers, controller)
@@ -166,7 +144,7 @@ func (app *Application) Start() error {
 	app.queue.Start()
 
 	// Start server
-	return app.app.Listen(fmt.Sprintf(":%d", app.config.Port))
+	return app.server.Listen(fmt.Sprintf(":%d", app.config.Server.Port))
 }
 
 // Shutdown gracefully shuts down the application
@@ -189,7 +167,7 @@ func (app *Application) Shutdown() error {
 	}
 
 	// Shutdown server
-	return app.app.Shutdown()
+	return app.server.Shutdown()
 }
 
 // DB returns the database connection
@@ -199,7 +177,7 @@ func (app *Application) DB() *gorm.DB {
 
 // Auth returns the JWT manager
 func (app *Application) Auth() *auth.JWTManager {
-	return app.auth
+	return app.auth.JWTManager
 }
 
 // Queue returns the job queue
@@ -219,15 +197,15 @@ func (app *Application) Plugins() *plugin.Manager {
 
 // Group creates a new route group
 func (a *Application) Group(prefix string) fiber.Router {
-	return a.app.Group(prefix)
+	return a.server.Group(prefix)
 }
 
 // Use adds middleware to the application
 func (a *Application) Use(middleware ...interface{}) {
-	a.app.Use(middleware...)
+	a.server.Use(middleware...)
 }
 
 // Get returns the underlying Fiber app
 func (a *Application) Get() *fiber.App {
-	return a.app
+	return a.server
 } 

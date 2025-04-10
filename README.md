@@ -16,7 +16,7 @@ Forge is a modern, full-stack web framework for Go — designed to combine devel
 ## Installation
 
 ```bash
-go install github.com/forge/framework/cmd/forge@latest
+go install github.com/BisiOlaYemi/forge/cmd/forge@latest
 ```
 
 ## Quick Start

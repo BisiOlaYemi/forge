@@ -3,7 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/BisiOlaYemi/forge/pkg/forge"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +24,10 @@ func init() {
 		Short: "Create a new Forge project",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			createNewProject(args[0])
+			if err := createNewProject(args[0]); err != nil {
+				fmt.Printf("Error creating project: %v\n", err)
+				os.Exit(1)
+			}
 		},
 	}
 
@@ -31,7 +37,10 @@ func init() {
 		Short: "Generate a new controller",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			generateController(args[0])
+			if err := generateController(args[0]); err != nil {
+				fmt.Printf("Error generating controller: %v\n", err)
+				os.Exit(1)
+			}
 		},
 	}
 
@@ -40,7 +49,10 @@ func init() {
 		Short: "Generate a new model",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			generateModel(args[0])
+			if err := generateModel(args[0]); err != nil {
+				fmt.Printf("Error generating model: %v\n", err)
+				os.Exit(1)
+			}
 		},
 	}
 
@@ -59,24 +71,46 @@ func init() {
 	rootCmd.AddCommand(serveCmd)
 }
 
-func createNewProject(name string) {
-	fmt.Printf("Creating new Forge project: %s\n", name)
-	// TODO: Implement project scaffolding
-}
-
-func generateController(name string) {
-	fmt.Printf("Generating controller: %s\n", name)
-	// TODO: Implement controller generation
-}
-
-func generateModel(name string) {
-	fmt.Printf("Generating model: %s\n", name)
-	// TODO: Implement model generation
-}
-
 func startServer() {
-	fmt.Println("Starting Forge development server...")
-	// TODO: Implement server startup
+	// Create a new Forge application
+	app, err := forge.New(&forge.Config{
+		Name:        "Forge App",
+		Version:     "1.0.0",
+		Description: "A Forge application",
+		Server: forge.ServerConfig{
+			Host:     "localhost",
+			Port:     3000,
+			BasePath: "/",
+		},
+	})
+	if err != nil {
+		fmt.Printf("Error creating application: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create a hot reloader
+	reloader, err := forge.NewHotReloader(app)
+	if err != nil {
+		fmt.Printf("Error creating hot reloader: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Start the hot reloader
+	if err := reloader.Start(); err != nil {
+		fmt.Printf("Error starting hot reloader: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Wait for interrupt signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	// Stop the hot reloader
+	if err := reloader.Stop(); err != nil {
+		fmt.Printf("Error stopping hot reloader: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func main() {

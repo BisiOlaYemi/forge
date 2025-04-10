@@ -1,6 +1,7 @@
 package mailer
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"path/filepath"
@@ -52,15 +53,14 @@ func New(config Config) (*Mailer, error) {
 
 // Send sends an email
 func (m *Mailer) Send(to, subject, templateName string, data interface{}) error {
-	// Get template
 	tmpl := m.templates.Lookup(templateName)
 	if tmpl == nil {
 		return fmt.Errorf("template %s not found", templateName)
 	}
 
 	// Render template
-	var body string
-	if err := tmpl.ExecuteTemplate(&body, templateName, data); err != nil {
+	var buf bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&buf, templateName, data); err != nil {
 		return fmt.Errorf("failed to render template: %w", err)
 	}
 
@@ -69,7 +69,7 @@ func (m *Mailer) Send(to, subject, templateName string, data interface{}) error 
 	msg.SetHeader("From", m.from)
 	msg.SetHeader("To", to)
 	msg.SetHeader("Subject", subject)
-	msg.SetBody("text/html", body)
+	msg.SetBody("text/html", buf.String())
 
 	// Send message
 	if err := m.dialer.DialAndSend(msg); err != nil {
@@ -81,15 +81,14 @@ func (m *Mailer) Send(to, subject, templateName string, data interface{}) error 
 
 // SendWithAttachments sends an email with attachments
 func (m *Mailer) SendWithAttachments(to, subject, templateName string, data interface{}, attachments []string) error {
-	// Get template
 	tmpl := m.templates.Lookup(templateName)
 	if tmpl == nil {
 		return fmt.Errorf("template %s not found", templateName)
 	}
 
 	// Render template
-	var body string
-	if err := tmpl.ExecuteTemplate(&body, templateName, data); err != nil {
+	var buf bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&buf, templateName, data); err != nil {
 		return fmt.Errorf("failed to render template: %w", err)
 	}
 
@@ -98,7 +97,7 @@ func (m *Mailer) SendWithAttachments(to, subject, templateName string, data inte
 	msg.SetHeader("From", m.from)
 	msg.SetHeader("To", to)
 	msg.SetHeader("Subject", subject)
-	msg.SetBody("text/html", body)
+	msg.SetBody("text/html", buf.String())
 
 	// Add attachments
 	for _, attachment := range attachments {
