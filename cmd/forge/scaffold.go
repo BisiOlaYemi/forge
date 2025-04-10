@@ -57,7 +57,7 @@ func createNewProject(name string) error {
 	mainContent := `package main
 
 import (
-	"github.com/BisiOlaYemi/forge/framework/pkg/forge"
+	"github.com/BisiOlaYemi/forge/pkg/forge"
 )
 
 func main() {
@@ -107,7 +107,7 @@ database:
 go 1.21
 
 require (
-	github.com/BisiOlaYemi/forge/framework v0.1.0
+	github.com/BisiOlaYemi/forge v0.1.0
 )
 `
 
@@ -131,7 +131,7 @@ func generateController(name string) error {
 	controllerContent := `package controllers
 
 import (
-	"github.com/forge/framework/pkg/forge"
+	"github.com/BisiOlaYemi/forge/pkg/forge"
 )
 
 // ` + name + ` handles requests related to ` + strings.TrimSuffix(name, "Controller") + `

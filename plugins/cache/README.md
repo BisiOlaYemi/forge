@@ -24,7 +24,7 @@ plugins:
   cache:
     host: localhost
     port: 6379
-    password: ""  # Optional
+    password: ""  
     db: 0
     prefix: "forge:cache:"
 ```
@@ -32,7 +32,7 @@ plugins:
 ## Usage
 
 ```go
-import "github.com/yourusername/forge/plugins/cache"
+import "github.com/BisiOlaYemi/forge/plugins/cache"
 
 // In your controller or service
 func (c *YourController) SomeAction(ctx *forge.Context) error {
