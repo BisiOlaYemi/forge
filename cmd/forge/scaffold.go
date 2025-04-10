@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/BisiOlaYemi/forge/pkg/forge"
 )
 
 
@@ -76,6 +73,10 @@ func main() {
 			Host:     "localhost",
 			Port:     3000,
 			BasePath: "/",
+		},
+		Database: forge.DatabaseConfig{
+			Driver: "sqlite",
+			Name:   "forge.db",
 		},
 	})
 	if err != nil {
