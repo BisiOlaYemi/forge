@@ -5,9 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
-
 
 type ProjectTemplate struct {
 	Name        string
@@ -15,13 +13,11 @@ type ProjectTemplate struct {
 	Files       map[string]string
 }
 
-
 type ControllerTemplate struct {
 	Name        string
 	Description string
 	Methods     []string
 }
-
 
 type ModelTemplate struct {
 	Name        string
@@ -29,14 +25,12 @@ type ModelTemplate struct {
 	Fields      []string
 }
 
-
 func createNewProject(name string) error {
-	
+
 	if err := os.MkdirAll(name, 0755); err != nil {
 		return fmt.Errorf("failed to create project directory: %w", err)
 	}
 
-	
 	dirs := []string{
 		filepath.Join(name, "app", "controllers"),
 		filepath.Join(name, "app", "models"),
@@ -193,9 +187,9 @@ A web application built with Forge Framework.
 
 1. Run the development server:
    
-   ```bash
+   ` + "```" + `bash
    forge serve
-   ```
+   ` + "```" + `
 
 2. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
@@ -203,7 +197,7 @@ A web application built with Forge Framework.
 
 This project uses SQLite by default, which requires no additional setup. To use other databases:
 
-1. Edit the database configuration in \`config/forge.yaml\`
+1. Edit the database configuration in ` + "`config/forge.yaml`" + `
 2. Choose from: sqlite, mysql, postgres, sqlserver
 3. Provide connection details as required
 
@@ -211,15 +205,15 @@ This project uses SQLite by default, which requires no additional setup. To use 
 
 Generate new controllers:
 
-```bash
+` + "```" + `bash
 forge generate controller User
-```
+` + "```" + `
 
 Generate new models:
 
-```bash
+` + "```" + `bash
 forge generate model User
-```
+` + "```" + `
 
 ## Learn More
 
@@ -542,10 +536,9 @@ func (r *` + name + `Repository) Count() (int64, error) {
 func getCurrentModuleName() string {
 	data, err := os.ReadFile("go.mod")
 	if err != nil {
-		return "app" 
+		return "app"
 	}
 
-	
 	lines := strings.Split(string(data), "\n")
 	if len(lines) > 0 {
 		parts := strings.Fields(lines[0])
@@ -554,5 +547,5 @@ func getCurrentModuleName() string {
 		}
 	}
 
-	return "app" 
+	return "app"
 }
