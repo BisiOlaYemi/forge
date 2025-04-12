@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/BisiOlaYemi/forge/pkg/forge/auth"
 	"github.com/BisiOlaYemi/forge/pkg/forge/mailer"
@@ -52,16 +51,7 @@ type ServerConfig struct {
 	BasePath string
 }
 
-// DatabaseConfig represents the database configuration
-type DatabaseConfig struct {
-	Driver        string
-	Name          string
-	Host          string
-	Port          int
-	Username      string
-	Password      string
-	SlowThreshold time.Duration
-}
+
 
 // New creates a new Forge application
 func New(config *Config) (*Application, error) {
