@@ -93,8 +93,6 @@ func New(config *Config) (*Application, error) {
 	}
 	app.plugins = plugins
 
-	app.registerWelcomeRoute()
-
 	return app, nil
 }
 
@@ -172,9 +170,9 @@ func (app *Application) registerWelcomeRoute() {
 			<head>
 				<title>Welcome to %s</title>
 				<style>
-					body { font-family: Arial, sans-serif; text-align: center; padding: 60px; background:rgb(10, 16, 22); }
-					h1 { color:rgb(199, 201, 201); }
-					a { color:rgb(242, 56, 87); text-decoration: none; font-weight: bold; }
+					body { font-family: Arial, sans-serif; text-align: center; padding: 60px; background: #f8f9fa; }
+					h1 { color: #343a40; }
+					a { color: #007bff; text-decoration: none; font-weight: bold; }
 				</style>
 			</head>
 			<body>
