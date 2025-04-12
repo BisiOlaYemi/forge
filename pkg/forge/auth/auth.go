@@ -13,24 +13,20 @@ var (
 	ErrExpiredToken = fmt.Errorf("token has expired")
 )
 
-// JWTManager handles JWT token operations
 type JWTManager struct {
 	secretKey     string
 	tokenDuration time.Duration
 }
 
-// Auth represents the authentication manager
 type Auth struct {
 	*JWTManager
 }
 
-// Config represents the authentication configuration
 type Config struct {
 	SecretKey     string        `yaml:"secret_key"`
 	TokenDuration time.Duration `yaml:"token_duration"`
 }
 
-// New creates a new authentication manager
 func New(config Config) (*Auth, error) {
 	if config.SecretKey == "" {
 		return nil, fmt.Errorf("secret key is required")
@@ -50,7 +46,6 @@ func New(config Config) (*Auth, error) {
 	}, nil
 }
 
-// GenerateToken generates a new JWT token
 func (m *JWTManager) GenerateToken(userID string, claims map[string]interface{}) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": userID,
@@ -64,7 +59,6 @@ func (m *JWTManager) GenerateToken(userID string, claims map[string]interface{})
 	return token.SignedString([]byte(m.secretKey))
 }
 
-// ValidateToken validates a JWT token
 func (m *JWTManager) ValidateToken(tokenString string) (map[string]interface{}, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

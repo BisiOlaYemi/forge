@@ -7,7 +7,6 @@ import (
 	"github.com/BisiOlaYemi/forge/pkg/forge"
 )
 
-// HelloController handles hello world requests
 type HelloController struct {
 	forge.Controller
 }
@@ -23,7 +22,6 @@ func (c *HelloController) HandleGetHello(ctx *forge.Context) error {
 }
 
 func main() {
-	// Create a new Forge application
 	app, err := forge.New(&forge.Config{
 		Name:        "Hello Forge",
 		Version:     "1.0.0",
@@ -38,10 +36,8 @@ func main() {
 		log.Fatalf("Failed to create application: %v", err)
 	}
 
-	// Register the hello controller
 	app.RegisterController(&HelloController{})
 
-	// Start the server
 	fmt.Println("Server starting on http://localhost:3000")
 	if err := app.Start(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

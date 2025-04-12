@@ -14,12 +14,10 @@ import (
 	"gorm.io/driver/sqlserver"
 )
 
-// Database represents a database connection
 type Database struct {
 	DB *gorm.DB
 }
 
-// DatabaseConfig represents database configuration options
 type DatabaseConfig struct {
 	Driver        string        
 	Name          string        
@@ -38,7 +36,7 @@ type DatabaseConfig struct {
 	Debug         bool          
 }
 
-// DefaultDatabaseConfig returns a default database configuration
+
 func DefaultDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
 		Driver:        "sqlite",
@@ -56,13 +54,11 @@ func DefaultDatabaseConfig() *DatabaseConfig {
 	}
 }
 
-// NewDatabase creates a new database connection
 func NewDatabase(config *DatabaseConfig) (*Database, error) {
 	if config == nil {
 		config = DefaultDatabaseConfig()
 	}
 
-	// Set default values for empty fields
 	if config.SlowThreshold == 0 {
 		config.SlowThreshold = 200 * time.Millisecond
 	}
@@ -75,7 +71,6 @@ func NewDatabase(config *DatabaseConfig) (*Database, error) {
 		config.Timezone = "Local"
 	}
 
-	// For SQLite, ensure the directory exists
 	if config.Driver == "sqlite" {
 		dbDir := filepath.Dir(config.Name)
 		if err := os.MkdirAll(dbDir, 0755); err != nil {
@@ -83,7 +78,7 @@ func NewDatabase(config *DatabaseConfig) (*Database, error) {
 		}
 	}
 
-	// Configure GORM logger
+	// GORM logger
 	logLevel := config.LogLevel
 	if logLevel == 0 {
 		logLevel = logger.Info
@@ -211,17 +206,16 @@ func (d *Database) Close() error {
 	return sqlDB.Close()
 }
 
-// Exec executes raw SQL queries
+
 func (d *Database) Exec(sql string, values ...interface{}) error {
 	return d.DB.Exec(sql, values...).Error
 }
 
-// Raw executes a raw SQL query and scan the result into the given destination
 func (d *Database) Raw(sql string, dest interface{}, values ...interface{}) error {
 	return d.DB.Raw(sql, values...).Scan(dest).Error
 }
 
-// Ping pings the database to ensure the connection is alive
+
 func (d *Database) Ping() error {
 	sqlDB, err := d.DB.DB()
 	if err != nil {
@@ -230,7 +224,7 @@ func (d *Database) Ping() error {
 	return sqlDB.Ping()
 }
 
-// GetDriverName returns the name of the database driver
+
 func (d *Database) GetDriverName() string {
 	sqlDB, err := d.DB.DB()
 	if err != nil {
@@ -265,35 +259,32 @@ func (d *Database) GetDriverName() string {
 	return "unknown"
 }
 
-// Model sets the model for the DB operations
 func (d *Database) Model(value interface{}) *gorm.DB {
 	return d.DB.Model(value)
 }
 
-// Scopes applies the given scope(s) to the database query
 func (d *Database) Scopes(funcs ...func(*gorm.DB) *gorm.DB) *gorm.DB {
 	return d.DB.Scopes(funcs...)
 }
 
-// Preload preloads the given associations
 func (d *Database) Preload(query string, args ...interface{}) *gorm.DB {
 	return d.DB.Preload(query, args...)
 }
 
-// Migrations represents a collection of database migrations
+
 type Migration struct {
 	Name      string
 	Up        func(*gorm.DB) error
 	Down      func(*gorm.DB) error
 }
 
-// MigrationManager manages database migrations
+
 type MigrationManager struct {
 	DB         *Database
 	Migrations []Migration
 }
 
-// NewMigrationManager creates a new migration manager
+
 func NewMigrationManager(db *Database) *MigrationManager {
 	return &MigrationManager{
 		DB:         db,
@@ -301,7 +292,6 @@ func NewMigrationManager(db *Database) *MigrationManager {
 	}
 }
 
-// AddMigration adds a migration to the manager
 func (m *MigrationManager) AddMigration(name string, up, down func(*gorm.DB) error) {
 	m.Migrations = append(m.Migrations, Migration{
 		Name: name,
@@ -310,9 +300,9 @@ func (m *MigrationManager) AddMigration(name string, up, down func(*gorm.DB) err
 	})
 }
 
-// Migrate runs all pending migrations
+
 func (m *MigrationManager) Migrate() error {
-	// Create migrations table if it doesn't exist
+	
 	err := m.DB.DB.Exec(`CREATE TABLE IF NOT EXISTS migrations (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
@@ -322,31 +312,27 @@ func (m *MigrationManager) Migrate() error {
 	if err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
-	
-	// Get applied migrations
+
 	var appliedMigrations []string
 	err = m.DB.DB.Raw("SELECT name FROM migrations").Scan(&appliedMigrations).Error
 	if err != nil {
 		return fmt.Errorf("failed to get applied migrations: %w", err)
 	}
 	
-	// Convert to a map for easier lookup
+	
 	appliedMap := make(map[string]bool)
 	for _, name := range appliedMigrations {
 		appliedMap[name] = true
 	}
 	
-	// Apply pending migrations
 	for _, migration := range m.Migrations {
 		if !appliedMap[migration.Name] {
-			// Begin transaction
 			err := m.DB.Transaction(func(tx *gorm.DB) error {
-				// Apply migration
 				if err := migration.Up(tx); err != nil {
 					return err
 				}
 				
-				// Record migration
+				
 				return tx.Exec("INSERT INTO migrations (name) VALUES (?)", migration.Name).Error
 			})
 			
@@ -361,36 +347,36 @@ func (m *MigrationManager) Migrate() error {
 	return nil
 }
 
-// Rollback rolls back the last n migrations
+
 func (m *MigrationManager) Rollback(steps int) error {
-	// Get applied migrations in reverse order
+	
 	var appliedMigrations []string
 	err := m.DB.DB.Raw("SELECT name FROM migrations ORDER BY id DESC LIMIT ?", steps).Scan(&appliedMigrations).Error
 	if err != nil {
 		return fmt.Errorf("failed to get applied migrations: %w", err)
 	}
 	
-	// Create a map for faster lookup
+	
 	migrationMap := make(map[string]Migration)
 	for _, migration := range m.Migrations {
 		migrationMap[migration.Name] = migration
 	}
 	
-	// Roll back migrations
+	
 	for _, name := range appliedMigrations {
 		migration, ok := migrationMap[name]
 		if !ok {
 			return fmt.Errorf("migration '%s' not found", name)
 		}
 		
-		// Begin transaction
+		
 		err := m.DB.Transaction(func(tx *gorm.DB) error {
-			// Roll back migration
+			
 			if err := migration.Down(tx); err != nil {
 				return err
 			}
 			
-			// Remove migration record
+			
 			return tx.Exec("DELETE FROM migrations WHERE name = ?", name).Error
 		})
 		

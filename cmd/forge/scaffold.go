@@ -50,7 +50,6 @@ func createNewProject(name string) error {
 		}
 	}
 
-	// Create main.go
 	mainContent := `package main
 
 import (
@@ -72,11 +71,11 @@ func main() {
 			BasePath: "/",
 		},
 		Database: forge.DatabaseConfig{
-			Driver: "sqlite",  // Choose from: sqlite, mysql, postgres, sqlserver
+			Driver: "sqlite",  
 			Name:   "forge.db",
 			// Uncomment these for other database types
 			// Host:     "localhost",
-			// Port:     3306,  // MySQL: 3306, PostgreSQL: 5432, SQL Server: 1433
+			// Port:     3306,  
 			// Username: "forge_user",
 			// Password: "forge_password",
 		},
@@ -100,7 +99,6 @@ func main() {
 		return fmt.Errorf("failed to create main.go: %w", err)
 	}
 
-	// Create config/forge.yaml with comprehensive configuration
 	configContent := `# Forge Framework Configuration
 
 # Application Settings
@@ -111,7 +109,7 @@ app:
   environment: "development" 
   debug: true
   timezone: "UTC"
-  secret_key: "change-this-to-your-secure-secret-key"
+  secret_key: "change-this-to-your-own-secure-secret-key"
   log_level: "info" 
 
 # Server Configuration
@@ -129,7 +127,7 @@ database:
   default:
     driver: "sqlite" 
     name: "forge.db"
-    # Uncomment these for other database types
+    # Uncomment these below for other database types
     # host: "localhost"
     # port: 3306  
     # username: "forge_user"
@@ -144,7 +142,7 @@ database:
     log_level: "info" 
     debug: false
 
-# Authentication Configuration
+
 auth:
   jwt:
     secret_key: "change-this-to-your-personal-jwt-secret-key"
@@ -152,9 +150,9 @@ auth:
     refresh_expiration: 604800 
     signing_method: "HS256" 
 
-# View Configuration
+
 view:
-  engine: "go-template" # go-template, jet
+  engine: "go-template" 
   directory: "templates"
   extension: ".gohtml"
   cache: true
@@ -164,7 +162,6 @@ view:
 		return fmt.Errorf("failed to create forge.yaml: %w", err)
 	}
 
-	// Create go.mod
 	modContent := `module ` + name + `
 
 go 1.21
@@ -178,7 +175,6 @@ require (
 		return fmt.Errorf("failed to create go.mod: %w", err)
 	}
 
-	// Create a basic README.md
 	readmeContent := `# ` + name + `
 
 A web application built with Forge Framework.
@@ -228,15 +224,12 @@ To learn more about Forge Framework, check out the documentation at [Forge Frame
 	return nil
 }
 
-// generateController generates a new controller
 func generateController(name string) error {
-	// Convert name to proper case
 	name = strings.ToUpper(name[:1]) + name[1:]
 	if !strings.HasSuffix(name, "Controller") {
 		name += "Controller"
 	}
 
-	// Create controller file
 	controllerContent := `package controllers
 
 import (
@@ -358,27 +351,25 @@ type ` + strings.TrimSuffix(name, "Controller") + ` struct {
 	ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
 	CreatedAt time.Time ` + "`json:\"created_at\" gorm:\"autoCreateTime\"`" + `
 	UpdatedAt time.Time ` + "`json:\"updated_at\" gorm:\"autoUpdateTime\"`" + `
-	// Add custom fields here
+	// Continue adding custom fields here
 }
 `
 
-	// Create request/response types
 	typesContent := `package controllers
 
 // Create` + strings.TrimSuffix(name, "Controller") + `Request represents the request body for creating a ` + strings.ToLower(strings.TrimSuffix(name, "Controller")) + `
 type Create` + strings.TrimSuffix(name, "Controller") + `Request struct {
 	Name string ` + "`json:\"name\" validate:\"required\"`" + `
-	// Add other fields here
+	// Continue adding other fields here
 }
 
 // Update` + strings.TrimSuffix(name, "Controller") + `Request represents the request body for updating a ` + strings.ToLower(strings.TrimSuffix(name, "Controller")) + `
 type Update` + strings.TrimSuffix(name, "Controller") + `Request struct {
 	Name string ` + "`json:\"name\" validate:\"required\"`" + `
-	// Add other fields here
+	// Continue adding other fields here
 }
 `
 
-	// Write files
 	if err := os.WriteFile(filepath.Join("app", "controllers", strings.ToLower(name)+".go"), []byte(controllerContent), 0644); err != nil {
 		return fmt.Errorf("failed to create controller file: %w", err)
 	}
@@ -395,7 +386,6 @@ type Update` + strings.TrimSuffix(name, "Controller") + `Request struct {
 	return nil
 }
 
-// generateModel generates a new model
 func generateModel(name string) error {
 	name = strings.ToUpper(name[:1]) + name[1:]
 	modelContent := `package models
@@ -409,7 +399,7 @@ type ` + name + ` struct {
 	ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
 	CreatedAt time.Time ` + "`json:\"created_at\" gorm:\"autoCreateTime\"`" + `
 	UpdatedAt time.Time ` + "`json:\"updated_at\" gorm:\"autoUpdateTime\"`" + `
-	// Add your custom fields here
+	
 	
 	// Example fields (uncomment and modify as needed):
 	// Name        string    ` + "`json:\"name\" gorm:\"size:255;not null\"`" + `
@@ -432,7 +422,6 @@ func (m *` + name + `) BeforeCreate() error {
 }
 `
 
-	// Create migration file
 	migrationContent := `package migrations
 
 import (
@@ -451,7 +440,6 @@ func Drop` + name + `Table(db *gorm.DB) error {
 }
 `
 
-	// Create a repository file for database operations
 	repositoryContent := `package repositories
 
 import (
@@ -510,7 +498,6 @@ func (r *` + name + `Repository) Count() (int64, error) {
 // Custom queries can be added below
 `
 
-	// Write files
 	if err := os.WriteFile(filepath.Join("app", "models", strings.ToLower(name)+".go"), []byte(modelContent), 0644); err != nil {
 		return fmt.Errorf("failed to create model file: %w", err)
 	}
@@ -519,7 +506,6 @@ func (r *` + name + `Repository) Count() (int64, error) {
 		return fmt.Errorf("failed to create migration file: %w", err)
 	}
 
-	// Create repositories directory if it doesn't exist
 	if err := os.MkdirAll(filepath.Join("app", "repositories"), 0755); err != nil {
 		return fmt.Errorf("failed to create repositories directory: %w", err)
 	}
@@ -532,7 +518,6 @@ func (r *` + name + `Repository) Count() (int64, error) {
 	return nil
 }
 
-// Helper function to get the current Go module name
 func getCurrentModuleName() string {
 	data, err := os.ReadFile("go.mod")
 	if err != nil {

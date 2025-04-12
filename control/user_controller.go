@@ -4,24 +4,21 @@ import (
 	"github.com/BisiOlaYemi/forge/pkg/forge"
 )
 
-// UserController handles user-related requests
 type UserController struct {
 	forge.Controller
 }
 
-// LoginRequest represents the login request body
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`
 }
 
-// LoginResponse represents the login response
+
 type LoginResponse struct {
 	Token string `json:"token"`
 	User  User   `json:"user"`
 }
 
-// User represents a user entity
 type User struct {
 	ID    uint   `json:"id"`
 	Email string `json:"email"`
@@ -41,7 +38,7 @@ func (c *UserController) HandlePostLogin(ctx *forge.Context) error {
 		})
 	}
 
-	// login logic
+	
 	response := LoginResponse{
 		Token: "dummy-token",
 		User: User{

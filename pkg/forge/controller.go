@@ -7,12 +7,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// Controller is the base type for all controllers
+
 type Controller struct {
 	app *Application
 }
 
-// Route metadata for OpenAPI documentation
+
 type RouteMetadata struct {
 	Method      string
 	Path        string
@@ -21,10 +21,8 @@ type RouteMetadata struct {
 	Response    interface{}
 }
 
-// HandlerFunc is the type for controller action methods
 type HandlerFunc func(*Context) error
 
-// RegisterRoutes registers all routes for a controller
 func (c *Controller) RegisterRoutes(router fiber.Router) {
 	t := reflect.TypeOf(c)
 	for i := 0; i < t.NumMethod(); i++ {
@@ -35,10 +33,7 @@ func (c *Controller) RegisterRoutes(router fiber.Router) {
 	}
 }
 
-// registerRoute registers a single route based on method name and metadata
 func (c *Controller) registerRoute(router fiber.Router, method reflect.Method) {
-	// Extract HTTP method and path from method name
-	// Example: HandleGetUser -> GET /user
 	name := strings.TrimPrefix(method.Name, "Handle")
 	parts := splitCamelCase(name)
 	
@@ -52,7 +47,6 @@ func (c *Controller) registerRoute(router fiber.Router, method reflect.Method) {
 		}
 	}
 
-	// Create handler wrapper
 	handler := func(ctx *fiber.Ctx) error {
 		forgeCtx := NewContext(ctx)
 		return method.Func.Call([]reflect.Value{
@@ -76,7 +70,6 @@ func (c *Controller) registerRoute(router fiber.Router, method reflect.Method) {
 	}
 }
 
-// splitCamelCase splits a camelCase string into parts
 func splitCamelCase(s string) []string {
 	var parts []string
 	var current strings.Builder
@@ -96,12 +89,10 @@ func splitCamelCase(s string) []string {
 	return parts
 }
 
-// SetApplication sets the application instance for the controller
 func (c *Controller) SetApplication(app *Application) {
 	c.app = app
 }
 
-// App returns the application instance
 func (c *Controller) App() *Application {
 	return c.app
 } 

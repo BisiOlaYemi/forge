@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// OpenAPISpec represents an OpenAPI specification
+
 type OpenAPISpec struct {
 	OpenAPI    string                 `json:"openapi"`
 	Info       OpenAPIInfo           `json:"info"`
@@ -15,14 +15,14 @@ type OpenAPISpec struct {
 	Components OpenAPIComponents     `json:"components"`
 }
 
-// OpenAPIInfo represents the OpenAPI info object
+
 type OpenAPIInfo struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Version     string `json:"version"`
 }
 
-// PathItem represents a path in the OpenAPI specification
+
 type PathItem struct {
 	Get     *Operation `json:"get,omitempty"`
 	Post    *Operation `json:"post,omitempty"`
@@ -31,7 +31,7 @@ type PathItem struct {
 	Patch   *Operation `json:"patch,omitempty"`
 }
 
-// Operation represents an operation in the OpenAPI specification
+
 type Operation struct {
 	Summary     string                    `json:"summary"`
 	Description string                    `json:"description"`
@@ -43,7 +43,7 @@ type Operation struct {
 	Security    []map[string][]string     `json:"security,omitempty"`
 }
 
-// Parameter represents a parameter in the OpenAPI specification
+
 type Parameter struct {
 	Name        string      `json:"name"`
 	In          string      `json:"in"`
@@ -52,25 +52,25 @@ type Parameter struct {
 	Schema      *Schema     `json:"schema"`
 }
 
-// RequestBody represents a request body in the OpenAPI specification
+
 type RequestBody struct {
 	Description string                      `json:"description"`
 	Required    bool                        `json:"required"`
 	Content     map[string]MediaTypeObject  `json:"content"`
 }
 
-// Response represents a response in the OpenAPI specification
+
 type Response struct {
 	Description string                      `json:"description"`
 	Content     map[string]MediaTypeObject  `json:"content,omitempty"`
 }
 
-// MediaTypeObject represents a media type in the OpenAPI specification
+
 type MediaTypeObject struct {
 	Schema *Schema `json:"schema"`
 }
 
-// Schema represents a schema in the OpenAPI specification
+
 type Schema struct {
 	Type                 string                `json:"type,omitempty"`
 	Format              string                `json:"format,omitempty"`
@@ -81,13 +81,13 @@ type Schema struct {
 	AdditionalProperties *Schema              `json:"additionalProperties,omitempty"`
 }
 
-// OpenAPIComponents represents the components section of the OpenAPI specification
+
 type OpenAPIComponents struct {
 	Schemas         map[string]*Schema        `json:"schemas"`
 	SecuritySchemes map[string]SecurityScheme `json:"securitySchemes"`
 }
 
-// SecurityScheme represents a security scheme in the OpenAPI specification
+
 type SecurityScheme struct {
 	Type         string `json:"type"`
 	Description  string `json:"description,omitempty"`
@@ -109,7 +109,7 @@ func getMethodAnnotations(methodName string) []string {
 
 func getHTTPMethodFromAnnotations(method reflect.Method) string {
 	if method.PkgPath != "" {
-		return "" // Skip unexported methods
+		return "" 
 	}
 
 	annotations := getMethodAnnotations(method.Name)
@@ -122,7 +122,7 @@ func getHTTPMethodFromAnnotations(method reflect.Method) string {
 	return ""
 }
 
-// GenerateOpenAPI generates OpenAPI documentation for the application
+
 func (app *Application) GenerateOpenAPI() (*OpenAPISpec, error) {
 	spec := &OpenAPISpec{
 		OpenAPI: "3.0.0",
@@ -138,7 +138,7 @@ func (app *Application) GenerateOpenAPI() (*OpenAPISpec, error) {
 		},
 	}
 
-	// Add JWT security scheme
+	
 	spec.Components.SecuritySchemes["bearerAuth"] = SecurityScheme{
 		Type:         "http",
 		Scheme:       "bearer",
@@ -146,7 +146,7 @@ func (app *Application) GenerateOpenAPI() (*OpenAPISpec, error) {
 		Description:  "JWT token for authentication",
 	}
 
-	// Add paths from controllers
+	
 	app.mu.RLock()
 	defer app.mu.RUnlock()
 
@@ -159,10 +159,10 @@ func (app *Application) GenerateOpenAPI() (*OpenAPISpec, error) {
 				continue
 			}
 
-			// Get path from method name or annotation
+			
 			path := fmt.Sprintf("/%s/%s", strings.ToLower(controllerType.Name()), strings.ToLower(method.Name))
 
-			// Create operation
+			
 			operation := &Operation{
 				Summary:     fmt.Sprintf("%s %s", httpMethod, path),
 				OperationID: fmt.Sprintf("%s_%s", strings.ToLower(controllerType.Name()), strings.ToLower(method.Name)),
@@ -185,7 +185,7 @@ func (app *Application) GenerateOpenAPI() (*OpenAPISpec, error) {
 				},
 			}
 
-			// Add request body if needed
+			
 			if httpMethod == "POST" || httpMethod == "PUT" || httpMethod == "PATCH" {
 				requestType := getRequestTypeFromMethod(method)
 				if requestType != nil {
@@ -200,7 +200,7 @@ func (app *Application) GenerateOpenAPI() (*OpenAPISpec, error) {
 				}
 			}
 
-			// Add operation to path
+			
 			pathItem, ok := spec.Paths[path]
 			if !ok {
 				pathItem = PathItem{}
@@ -226,7 +226,7 @@ func (app *Application) GenerateOpenAPI() (*OpenAPISpec, error) {
 	return spec, nil
 }
 
-// getRequestTypeFromMethod gets the request type from a method
+
 func getRequestTypeFromMethod(method reflect.Method) reflect.Type {
 	methodType := method.Type
 	if methodType.NumIn() < 3 {
@@ -235,7 +235,7 @@ func getRequestTypeFromMethod(method reflect.Method) reflect.Type {
 	return methodType.In(2)
 }
 
-// GenerateSwaggerUI generates a Swagger UI HTML page
+
 func GenerateSwaggerUI(spec *OpenAPISpec) (string, error) {
 	specJSON, err := json.Marshal(spec)
 	if err != nil {
@@ -268,7 +268,7 @@ func GenerateSwaggerUI(spec *OpenAPISpec) (string, error) {
 </html>`, string(specJSON)), nil
 }
 
-// generateSchemaFromType generates an OpenAPI schema from a Go type
+
 func generateSchemaFromType(t reflect.Type) *Schema {
 	if t == nil {
 		return nil

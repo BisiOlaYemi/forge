@@ -11,7 +11,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// HotReloader represents a hot reloader
+
 type HotReloader struct {
 	app     *Application
 	watcher *fsnotify.Watcher
@@ -19,7 +19,7 @@ type HotReloader struct {
 	done    chan bool
 }
 
-// NewHotReloader creates a new hot reloader
+
 func NewHotReloader(app *Application) (*HotReloader, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -33,20 +33,18 @@ func NewHotReloader(app *Application) (*HotReloader, error) {
 	}, nil
 }
 
-// Start starts the hot reloader
+
 func (h *HotReloader) Start() error {
-	// Start the application
 	if err := h.startApp(); err != nil {
 		return err
 	}
 
-	// Watch for file changes
+	
 	go h.watch()
 
 	return nil
 }
 
-// Stop stops the hot reloader
 func (h *HotReloader) Stop() error {
 	close(h.done)
 	if h.cmd != nil && h.cmd.Process != nil {
@@ -57,16 +55,13 @@ func (h *HotReloader) Stop() error {
 	return h.watcher.Close()
 }
 
-// startApp starts the application
 func (h *HotReloader) startApp() error {
-	// Kill existing process if any
 	if h.cmd != nil && h.cmd.Process != nil {
 		if err := h.cmd.Process.Kill(); err != nil {
 			return fmt.Errorf("failed to kill existing process: %w", err)
 		}
 	}
 
-	// Start new process
 	h.cmd = exec.Command("go", "run", ".")
 	h.cmd.Stdout = os.Stdout
 	h.cmd.Stderr = os.Stderr
@@ -78,15 +73,12 @@ func (h *HotReloader) startApp() error {
 	return nil
 }
 
-// watch watches for file changes
 func (h *HotReloader) watch() {
-	// Watch the current directory and all subdirectories
 	if err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Skip directories and non-Go files
 		if info.IsDir() || !strings.HasSuffix(path, ".go") {
 			return nil
 		}
@@ -97,7 +89,6 @@ func (h *HotReloader) watch() {
 		return
 	}
 
-	// Watch for events
 	for {
 		select {
 		case event, ok := <-h.watcher.Events:
@@ -110,10 +101,9 @@ func (h *HotReloader) watch() {
 				continue
 			}
 
-			// Debounce events
+			// Debounce 
 			time.Sleep(100 * time.Millisecond)
 
-			// Restart the application
 			if err := h.startApp(); err != nil {
 				fmt.Printf("Error restarting application: %v\n", err)
 			}

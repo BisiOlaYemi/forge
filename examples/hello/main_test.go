@@ -11,11 +11,10 @@ import (
 )
 
 func TestHelloEndpoint(t *testing.T) {
-	// Create a new Forge application
 	app, err := forge.New(&forge.Config{
 		Name:        "Hello Forge Test",
 		Version:     "1.0.0",
-		Description: "Test instance of Hello World example",
+		Description: "Test instance of Hello World",
 		Server: forge.ServerConfig{
 			Host:     "localhost",
 			Port:     3000,
@@ -24,16 +23,15 @@ func TestHelloEndpoint(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Register the hello controller
+	
 	app.RegisterController(&HelloController{})
 
-	// Create a test request
+	
 	req := httptest.NewRequest("GET", "/hello", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	// Parse response body
 	body, err := io.ReadAll(resp.Body)
 	assert.NoError(t, err)
 
