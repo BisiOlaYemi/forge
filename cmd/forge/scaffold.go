@@ -254,7 +254,7 @@ type ` + name + ` struct {
 // @response 200 []` + strings.TrimSuffix(name, "Controller") + `
 func (c *` + name + `) HandleGet` + strings.TrimSuffix(name, "Controller") + `s(ctx *forge.Context) error {
 	var items []interface{}
-	if err := c.App.DB().Find(&items).Error; err != nil {
+	if err := c.App().DB().Find(&items).Error; err != nil {
 		return ctx.Status(500).JSON(map[string]string{"error": err.Error()})
 	}
 	return ctx.JSON(items)
@@ -268,7 +268,7 @@ func (c *` + name + `) HandleGet` + strings.TrimSuffix(name, "Controller") + `s(
 func (c *` + name + `) HandleGet` + strings.TrimSuffix(name, "Controller") + `ByID(ctx *forge.Context) error {
 	id := ctx.Param("id")
 	var item interface{}
-	if err := c.App.DB().First(&item, id).Error; err != nil {
+	if err := c.App().DB().First(&item, id).Error; err != nil {
 		return ctx.Status(404).JSON(map[string]string{"error": "Not found"})
 	}
 	return ctx.JSON(item)
@@ -289,7 +289,7 @@ func (c *` + name + `) HandleCreate` + strings.TrimSuffix(name, "Controller") + 
 	// Create record (replace with your model)
 	item := map[string]interface{}{"name": req.Name}
 	
-	if err := c.App.DB().Create(&item).Error; err != nil {
+	if err := c.App().DB().Create(&item).Error; err != nil {
 		return ctx.Status(500).JSON(map[string]string{"error": err.Error()})
 	}
 	
@@ -312,13 +312,13 @@ func (c *` + name + `) HandleUpdate` + strings.TrimSuffix(name, "Controller") + 
 	
 	// Update record (replace with your model)
 	var item interface{}
-	if err := c.App.DB().First(&item, id).Error; err != nil {
+	if err := c.App().DB().First(&item, id).Error; err != nil {
 		return ctx.Status(404).JSON(map[string]string{"error": "Not found"})
 	}
 	
 	// Update fields based on request
 	
-	if err := c.App.DB().Save(&item).Error; err != nil {
+	if err := c.App().DB().Save(&item).Error; err != nil {
 		return ctx.Status(500).JSON(map[string]string{"error": err.Error()})
 	}
 	
@@ -335,11 +335,11 @@ func (c *` + name + `) HandleDelete` + strings.TrimSuffix(name, "Controller") + 
 	
 	// Delete record (replace with your model)
 	var item interface{}
-	if err := c.App.DB().First(&item, id).Error; err != nil {
+	if err := c.App().DB().First(&item, id).Error; err != nil {
 		return ctx.Status(404).JSON(map[string]string{"error": "Not found"})
 	}
 	
-	if err := c.App.DB().Delete(&item).Error; err != nil {
+	if err := c.App().DB().Delete(&item).Error; err != nil {
 		return ctx.Status(500).JSON(map[string]string{"error": err.Error()})
 	}
 	
