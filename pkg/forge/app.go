@@ -19,15 +19,15 @@ import (
 var validate = validator.New()
 
 type Application struct {
-	config     *Config
-	server     *fiber.App
-	validator  *validator.Validate
-	database   *Database
-	auth       *auth.Auth
-	mailer     *mailer.Mailer
-	queue      *queue.Queue
-	plugins    *plugin.Manager
-	mu         sync.RWMutex
+	config      *Config
+	server      *fiber.App
+	validator   *validator.Validate
+	database    *Database
+	auth        *auth.Auth
+	mailer      *mailer.Mailer
+	queue       *queue.Queue
+	plugins     *plugin.Manager
+	mu          sync.RWMutex
 	controllers []interface{}
 }
 
@@ -42,15 +42,11 @@ type Config struct {
 	Queue       queue.Config
 }
 
-
 type ServerConfig struct {
 	Host     string
 	Port     int
 	BasePath string
 }
-
-
-
 
 func New(config *Config) (*Application, error) {
 	app := &Application{
@@ -59,7 +55,6 @@ func New(config *Config) (*Application, error) {
 		validator: validator.New(),
 	}
 
-	
 	if config.Database.Driver != "" {
 		db, err := NewDatabase(&config.Database)
 		if err != nil {
@@ -68,7 +63,6 @@ func New(config *Config) (*Application, error) {
 		app.database = db
 	}
 
-	
 	if config.Auth.SecretKey != "" {
 		auth, err := auth.New(config.Auth)
 		if err != nil {
@@ -77,7 +71,6 @@ func New(config *Config) (*Application, error) {
 		app.auth = auth
 	}
 
-	
 	if config.Mailer.Host != "" {
 		mailer, err := mailer.New(config.Mailer)
 		if err != nil {
@@ -86,7 +79,6 @@ func New(config *Config) (*Application, error) {
 		app.mailer = mailer
 	}
 
-	
 	if config.Queue.Host != "" {
 		queue, err := queue.New(config.Queue.Host, config.Queue.Password, config.Queue.DB)
 		if err != nil {
@@ -95,41 +87,36 @@ func New(config *Config) (*Application, error) {
 		app.queue = queue
 	}
 
-	
 	plugins := plugin.NewManager(app, "plugins")
 	if err := plugins.LoadPlugins(); err != nil {
 		return nil, fmt.Errorf("failed to load plugins: %w", err)
 	}
 	app.plugins = plugins
 
+	app.registerWelcomeRoute()
+
 	return app, nil
 }
-
 
 func (app *Application) GetConfig() interface{} {
 	return app.config
 }
 
-
 func (app *Application) GetDB() interface{} {
 	return app.database.DB
 }
-
 
 func (app *Application) GetAuth() interface{} {
 	return app.auth
 }
 
-
 func (app *Application) GetQueue() interface{} {
 	return app.queue
 }
 
-
 func (app *Application) GetMailer() interface{} {
 	return app.mailer
 }
-
 
 func (app *Application) RegisterController(controller interface{}) {
 	app.mu.Lock()
@@ -177,8 +164,33 @@ func (app *Application) RegisterController(controller interface{}) {
 	}
 }
 
+func (app *Application) registerWelcomeRoute() {
+	app.server.Get("/", func(c *fiber.Ctx) error {
+		html := fmt.Sprintf(`
+		<!DOCTYPE html>
+		<html>
+			<head>
+				<title>Welcome to %s</title>
+				<style>
+					body { font-family: Arial, sans-serif; text-align: center; padding: 60px; background:rgb(10, 16, 22); }
+					h1 { color:rgb(199, 201, 201); }
+					a { color:rgb(242, 56, 87); text-decoration: none; font-weight: bold; }
+				</style>
+			</head>
+			<body>
+				<h1>🚀 Welcome to %s</h1>
+				<p>Your Forge application is up and running!</p>
+				<p><a href="/api/docs">View API Documentation</a></p>
+			</body>
+		</html>
+		`, app.config.Name, app.config.Name)
+
+		return c.Type("html").SendString(html)
+	})
+}
+
 func (app *Application) Start() error {
-	
+
 	if app.queue != nil {
 		app.queue.Start()
 	}
@@ -203,35 +215,28 @@ func (app *Application) Shutdown() error {
 		}
 	}
 
-	
 	return app.server.Shutdown()
 }
-
 
 func (app *Application) DB() *gorm.DB {
 	return app.database.DB
 }
 
-
 func (app *Application) Auth() *auth.JWTManager {
 	return app.auth.JWTManager
 }
-
 
 func (app *Application) Queue() *queue.Queue {
 	return app.queue
 }
 
-
 func (app *Application) Mailer() *mailer.Mailer {
 	return app.mailer
 }
 
-
 func (app *Application) Plugins() *plugin.Manager {
 	return app.plugins
 }
-
 
 func (a *Application) Group(prefix string) fiber.Router {
 	return a.server.Group(prefix)
@@ -247,4 +252,4 @@ func (a *Application) Get() *fiber.App {
 
 func (app *Application) Test(req *http.Request) (*http.Response, error) {
 	return app.server.Test(req)
-} 
+}
