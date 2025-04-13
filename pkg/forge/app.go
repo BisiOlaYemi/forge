@@ -162,31 +162,6 @@ func (app *Application) RegisterController(controller interface{}) {
 	}
 }
 
-func (app *Application) registerWelcomeRoute() {
-	app.server.Get("/", func(c *fiber.Ctx) error {
-		html := fmt.Sprintf(`
-		<!DOCTYPE html>
-		<html>
-			<head>
-				<title>Welcome to %s</title>
-				<style>
-					body { font-family: Arial, sans-serif; text-align: center; padding: 60px; background: #f8f9fa; }
-					h1 { color: #343a40; }
-					a { color: #007bff; text-decoration: none; font-weight: bold; }
-				</style>
-			</head>
-			<body>
-				<h1>🚀 Welcome to %s</h1>
-				<p>Your Forge application is up and running!</p>
-				<p><a href="/api/docs">View API Documentation</a></p>
-			</body>
-		</html>
-		`, app.config.Name, app.config.Name)
-
-		return c.Type("html").SendString(html)
-	})
-}
-
 func (app *Application) Start() error {
 
 	if app.queue != nil {
