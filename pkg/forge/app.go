@@ -94,7 +94,7 @@ func New(config *Config) (*Application, error) {
 	app.plugins = plugins
 
 	app.server.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString(`
+		return c.Type("html").SendString(`
 			<!DOCTYPE html>
 			<html lang="en">
 			<head>
