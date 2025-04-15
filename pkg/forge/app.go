@@ -93,6 +93,31 @@ func New(config *Config) (*Application, error) {
 	}
 	app.plugins = plugins
 
+	app.server.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString(`
+			<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+				<title>🔥 Forge</title>
+				<style>
+					body { font-family: sans-serif; text-align: center; padding: 50px; background-color:rgb(11, 10, 10); }
+					h1 { font-size: 2.5em; color:rgb(209, 219, 231); }
+					p { font-size: 1.2em; color: #fff; }
+					a { color: #007BFF; text-decoration: none; }
+					a:hover { text-decoration: underline; }
+				</style>
+			</head>
+			<body>
+				<h1>Welcome to Forge</h1>
+				<p>Built with love by <strong>Yemi Ogunrinde</strong></p>
+				<p>Visit <a href="/docs">/docs</a> to view your Swagger API</p>
+			</body>
+			</html>
+		`)
+	})
+	
+
 	return app, nil
 }
 
