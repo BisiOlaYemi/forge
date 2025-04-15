@@ -121,7 +121,7 @@ func installSuccessMessage() {
     yellow := color.New(color.FgYellow).SprintFunc()
     bold := color.New(color.Bold).SprintFunc()
 
-    fmt.Println("\n✨ " + bold("Welcome to Forge: The GoPowerhouse Web Framework!") + " ✨")
+    fmt.Println("\n✨ " + bold("Welcome to 🔥Forge: The GoPowerhouse Web Framework!") + " ✨")
     fmt.Println("🔨 Created with passion by " + green("Yemi Ogunrinde"))
     fmt.Println(cyan("\nLet’s build something amazing together! 🚀"))
     fmt.Println(yellow("Happy Coding! 💻"))

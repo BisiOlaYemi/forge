@@ -401,7 +401,7 @@ type ` + name + ` struct {
 	UpdatedAt time.Time ` + "`json:\"updated_at\" gorm:\"autoUpdateTime\"`" + `
 	
 	
-	// Example fields (uncomment and modify as needed):
+	// template fields (uncomment and modify as needed):
 	// Name        string    ` + "`json:\"name\" gorm:\"size:255;not null\"`" + `
 	// Description string    ` + "`json:\"description\" gorm:\"type:text\"`" + `
 	// Status      string    ` + "`json:\"status\" gorm:\"size:50;default:'active'\"`" + `
