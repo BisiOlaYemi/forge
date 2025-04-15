@@ -5,6 +5,7 @@ go 1.23
 toolchain go1.24.2
 
 require (
+	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-playground/validator/v10 v10.17.0

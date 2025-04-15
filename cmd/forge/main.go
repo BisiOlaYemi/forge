@@ -8,6 +8,7 @@ import (
 
 	"github.com/BisiOlaYemi/forge/pkg/forge"
 	"github.com/spf13/cobra"
+	"github.com/fatih/color"
 )
 
 var rootCmd = &cobra.Command{
@@ -28,6 +29,7 @@ func init() {
 				fmt.Printf("Error creating project: %v\n", err)
 				os.Exit(1)
 			}
+			installSuccessMessage()
 		},
 	}
 
@@ -111,6 +113,19 @@ func startServer() {
 		fmt.Printf("Error stopping hot reloader: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func installSuccessMessage() {
+    cyan := color.New(color.FgCyan).SprintFunc()
+    green := color.New(color.FgGreen).SprintFunc()
+    yellow := color.New(color.FgYellow).SprintFunc()
+    bold := color.New(color.Bold).SprintFunc()
+
+    fmt.Println("\n✨ " + bold("Welcome to Forge: The GoPowerhouse Web Framework!") + " ✨")
+    fmt.Println("🔨 Created with passion by " + green("Yemi Ogunrinde"))
+    fmt.Println(cyan("\nLet’s build something amazing together! 🚀"))
+    fmt.Println(yellow("Happy Coding! 💻"))
+    fmt.Println("☕ Like it? " + bold("Buy me a coffee") + " at: https://buymeacoffee.com/yemiogunrinde\n")
 }
 
 func main() {
