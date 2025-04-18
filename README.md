@@ -14,6 +14,52 @@ Forge is a modern, full-stack web framework for Go — designed to combine devel
 - **Extensible Plugins**: File uploads, RBAC, jobs, and more coming
 - **Full-Stack Ready**: With template support or HTMX/SPA integration
 
+## Implementation Details
+
+### Why Fiber?
+
+Forge is built on top of the [Fiber](https://github.com/gofiber/fiber) web framework for several reasons:
+
+1. **Performance**: Fiber is built on top of [fasthttp](https://github.com/valyala/fasthttp), which is significantly faster than Go's standard net/http package
+2. **Express-like API**: Familiar API design for developers coming from Node.js/Express
+3. **Middleware ecosystem**: Rich middleware ecosystem that we can leverage
+4. **Low memory footprint**: Optimized for minimal memory usage and high concurrency
+
+While we could have built directly on Go's standard library, we chose Fiber to provide better performance and developer experience. The Forge framework abstracts away most Fiber-specific details, allowing you to work with a clean, consistent API.
+
+## Forge vs Fiber: Why Choose Forge?
+
+While Forge is built on top of Fiber for its performance benefits, it offers several significant advantages:
+
+1. **Convention over Configuration Architecture**
+   - Opinionated MVC structure with clear separation of concerns
+   - Controller-based routing with automatic route generation
+   - Standardized project layout for sustainable development
+
+2. **Powerful Middleware System**
+   - Express.js-like middleware with next() handler functionality
+   - Controller-level middleware for route-specific handling
+   - Middleware groups for sharing behavior across controllers
+   - Built-in middleware for common tasks (logging, auth, rate limiting)
+
+3. **Full-Stack Development Framework**
+   - Complete solution beyond just HTTP handling
+   - Database integration with GORM (ORM)
+   - Authentication system with JWT
+   - Background job processing with queues
+   - Mailing capabilities
+   - Extensible plugin architecture
+
+4. **Dual Architecture Support**
+   - Monolithic applications with MVC pattern
+   - Microservices with modern containerized structure
+   - Shared tools and patterns across both architectures
+
+5. **Developer-Friendly Tooling**
+   - CLI for scaffolding new projects, controllers, models, and microservices
+   - Hot reloading for rapid development
+   - Automatic OpenAPI documentation generation
+
 ## Installation
 
 ```bash
@@ -153,12 +199,277 @@ func (c *UserController) HandlePostLogin(ctx *forge.Context) error {
 		})
 	}
 
-	// TODO: Implement actual login logic
+	// Implement actual login logic
 	return ctx.JSON(forge.H{
 		"message": "Welcome",
 	})
 }
 ```
+
+## Routing and Controllers
+
+Forge uses a convention-based approach to routing inspired by Ruby on Rails and Laravel. Controllers and their methods automatically map to HTTP routes.
+
+### Controller Naming Convention
+
+Controllers should be named with the `Controller` suffix:
+
+```go
+// UserController -> maps to "/user" route prefix
+type UserController struct {
+	forge.Controller
+}
+
+// AuthController -> maps to "/auth" route prefix
+type AuthController struct {
+	forge.Controller
+}
+```
+
+### Method Naming Convention
+
+Controller methods should follow this pattern:
+
+```
+Handle[HTTP Method][Action]
+```
+
+For example:
+
+```go
+// HandleGetUsers maps to GET /user
+func (c *UserController) HandleGetUsers(ctx *forge.Context) error {
+    // ...continue with implementation inside this wrapper
+}
+
+// HandlePostUser maps to POST /user
+func (c *UserController) HandlePostUser(ctx *forge.Context) error {
+    // ...continue with implementation inside this wrapper
+}
+
+// HandlePutUserById maps to PUT /user/:id
+func (c *UserController) HandlePutUserById(ctx *forge.Context) error {
+    id := ctx.Param("id")
+    // ...continue with implementation inside this wrapper
+}
+
+// HandleDeleteUser maps to DELETE /user
+func (c *UserController) HandleDeleteUser(ctx *forge.Context) error {
+    // ...continue with implementation inside this wrapper
+}
+```
+
+### Special Path Rules
+
+1. `ById` in the method name automatically maps to the path pattern with `:id` parameter
+2. For nested resources, use camel case: `HandleGetUserPosts` maps to GET /user/posts
+
+### Registering Controllers
+
+To register a controller with your Forge application:
+
+```go
+app.RegisterController(&UserController{})
+app.RegisterController(&AuthController{})
+```
+
+### Complete Example: Auth Controller
+
+Here's an example of a complete authentication controller:
+
+```go
+package controllers
+
+import (
+	"github.com/BisiOlaYemi/forge/pkg/forge"
+)
+
+// AuthController handles authentication-related requests
+type AuthController struct {
+	forge.Controller
+}
+
+// RegisterRequest represents the registration request body
+type RegisterRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8"`
+	Name     string `json:"name" validate:"required"`
+}
+
+// LoginRequest represents the login request body
+type LoginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+// HandlePostRegister handles user registration
+// Maps to: POST /auth/register
+func (c *AuthController) HandlePostRegister(ctx *forge.Context) error {
+	var req RegisterRequest
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.Status(400).JSON(forge.H{
+			"error": "Invalid request body",
+		})
+	}
+	
+	if err := ctx.Validate(&req); err != nil {
+		return ctx.Status(400).JSON(forge.H{
+			"error": "Validation failed",
+			"details": err.Error(),
+		})
+	}
+	
+	// Add user registration logic here...
+	
+	return ctx.Status(201).JSON(forge.H{
+		"message": "User registered successfully",
+	})
+}
+
+// HandlePostLogin handles user login
+// Maps to: POST /auth/login
+func (c *AuthController) HandlePostLogin(ctx *forge.Context) error {
+	var req LoginRequest
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.Status(400).JSON(forge.H{
+			"error": "Invalid request body",
+		})
+	}
+	
+	if err := ctx.Validate(&req); err != nil {
+		return ctx.Status(400).JSON(forge.H{
+			"error": "Validation failed", 
+			"details": err.Error(),
+		})
+	}
+	
+	// user authentication logic here...
+	
+	token := "sample-jwt-token" 
+	
+	return ctx.JSON(forge.H{
+		"token": token,
+		"message": "Login successful",
+	})
+}
+```
+
+### Starting the Server
+
+You can impmentment start Forge application server using any of these methods:
+
+```go
+// Option 1: Using Start (recommended)
+if err := app.Start(); err != nil {
+    log.Fatalf("Failed to start server: %v", err)
+}
+
+// Option 2: Using Listen (Fiber-style)
+if err := app.Listen(":3000"); err != nil {
+    log.Fatalf("Failed to start server: %v", err)
+}
+
+// Option 3: Using Serve (net/http-style)
+if err := app.Serve(); err != nil {
+    log.Fatalf("Failed to start server: %v", err)
+}
+```
+
+## Middleware System
+
+Forge provides a powerful middleware system inspired by Express.js. Middleware functions have access to the request/response cycle and can:
+
+- Execute any code
+- Make changes to the request and response objects
+- End the request-response cycle
+- Call the next middleware in the stack
+
+### Defining Middleware
+
+```go
+// Simple middleware function
+func LoggingMiddleware(next forge.HandlerFunc) forge.HandlerFunc {
+    return func(ctx *forge.Context) error {
+        start := time.Now()
+        
+        // Call the next handler in the chain
+        err := next(ctx)
+        
+        // Log after the request is processed
+        duration := time.Since(start)
+        ctx.App().Logger().Info("Request processed in %s", duration)
+        
+        return err
+    }
+}
+```
+
+### Using Middleware
+
+Middleware can be applied at multiple levels:
+
+#### 1. Controller-level middleware
+
+```go
+// Apply middleware to a controller
+userController := &UserController{}
+userController.Use(middleware.RequestLogger(), middleware.RequireAuth())
+
+// Register the controller
+app.RegisterController(userController)
+```
+
+#### 2. Controller group middleware
+
+```go
+// Create a group with shared middleware
+api := (&forge.Controller{}).Group("/api")
+api.Use(middleware.Recover(), middleware.RequestLogger())
+
+// Add controllers to the group
+api.Add(&UserController{})
+api.Add(&ProductController{})
+
+// Register all controllers in the group
+api.Register(app)
+```
+
+#### 3. Global middleware
+
+```go
+// Apply middleware to all routes
+app.Use(middleware.Recover(), middleware.RequestLogger())
+```
+
+### Built-in Middleware
+
+Forge comes with several built-in middleware functions:
+
+- `middleware.RequestLogger()` - Logs request information and timing
+- `middleware.Recover()` - Catches panics and converts them to errors
+- `middleware.RequireAuth()` - Handles authentication checks
+- `middleware.CORS(options)` - Configures CORS headers
+- `middleware.RateLimit(limit)` - Limits request rates
+- `middleware.Timeout(duration)` - Sets a timeout for request handling
+
+## CORS Configuration
+
+Forge includes built-in CORS support. Configure it in your application:
+
+```go
+app, err := forge.New(&forge.Config{
+    
+    CORS: forge.CORSConfig{
+        AllowOrigins:     "http://localhost:3000,https://ffg.com",
+        AllowMethods:     "GET,POST,PUT,DELETE",
+        AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+        AllowCredentials: true,
+        MaxAge:           86400, 
+    },
+})
+```
+
+If not specified, Forge uses a permissive default CORS configuration that allows all origins.
 
 ## Database Integration
 

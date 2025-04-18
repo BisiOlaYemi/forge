@@ -165,7 +165,7 @@ func microserviceSuccessMessage(name string) {
 	fmt.Printf(" 1. cd %s\n", name)
 	fmt.Println(" 2. go mod tidy")
 	fmt.Println(" 3. go run cmd/" + name + "/main.go")
-	fmt.Println(yellow("\nHappy Creating Microservices! 👨‍💻\n"))
+	fmt.Println(yellow("\nHappy Crafting Microservices! 👨‍💻\n"))
 }
 
 func main() {

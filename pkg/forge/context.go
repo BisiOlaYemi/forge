@@ -6,12 +6,20 @@ import (
 
 type Context struct {
 	*fiber.Ctx
+	app *Application
 }
 
 type H map[string]interface{}
 
-func NewContext(c *fiber.Ctx) *Context {
-	return &Context{Ctx: c}
+func NewContext(c *fiber.Ctx, app *Application) *Context {
+	return &Context{
+		Ctx: c,
+		app: app,
+	}
+}
+
+func (c *Context) App() *Application {
+	return c.app
 }
 
 func (c *Context) JSON(data interface{}) error {
@@ -45,4 +53,4 @@ func (c *Context) SetHeader(key, value string) {
 func (c *Context) Status(code int) *Context {
 	c.Ctx.Status(code)
 	return c
-} 
+}

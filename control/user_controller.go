@@ -60,7 +60,7 @@ func (c *UserController) HandleGetUser(ctx *forge.Context) error {
 	
 	user := User{
 		ID:    1,
-		Email: "fgo@example.com",
+		Email: "fgo@forge.com",
 		Name:  "Go Forge",
 	}
 
